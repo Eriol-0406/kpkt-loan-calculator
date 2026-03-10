@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Loan Calculator</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0f1e;
+      --bg2: #0d1b2a;
+      --card: rgba(255,255,255,0.04);
+      --card-border: rgba(255,255,255,0.08);
+      --blue: #4f9cf9;
+      --indigo: #818cf8;
+      --text: #e8edf5;
+      --muted: rgba(180,195,220,0.55);
+      --label: #7ba8d4;
+      --input-bg: rgba(255,255,255,0.05);
+      --input-border: rgba(255,255,255,0.12);
+      --error: #f87171;
+      --prefix-bg: rgba(79,156,249,0.08);
+      --prefix-border: rgba(255,255,255,0.08);
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--bg) 0%, var(--bg2) 50%, #0a1628 100%);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text);
+      padding: 40px 20px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .wrapper { width: 100%; max-width: 900px; }
+
+    /* HEADER */
+    .header { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; animation: fadeUp 0.5s ease both; }
+    .header-icon {
+      width: 46px; height: 46px; border-radius: 13px;
+      background: linear-gradient(135deg, var(--blue), var(--indigo));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; box-shadow: 0 4px 24px rgba(79,156,249,0.35); flex-shrink: 0;
+    }
+    .header-title { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
+    .header-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .divider { height: 1px; background: linear-gradient(90deg, rgba(79,156,249,0.4), transparent); margin: 18px 0 28px; }
+
+    /* GRID */
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+    @media (max-width: 720px) {
+      .grid-4 { grid-template-columns: 1fr 1fr; }
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 420px) {
+      .grid-4 { grid-template-columns: 1fr; }
+    }
+
+    /* FIELD */
+    .field { display: flex; flex-direction: column; gap: 0; animation: fadeUp 0.5s ease both; }
+    .field-label {
+      font-size: 11px; font-weight: 600; color: var(--label);
+      letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .field-wrap {
+      display: flex; align-items: stretch;
+      background: var(--input-bg); border: 1px solid var(--input-border);
+      border-radius: 10px; overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .field-wrap:focus-within {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(79,156,249,0.15);
+    }
+    .field-wrap.error { border-color: var(--error); }
+    .field-wrap.readonly { background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.06); }
+
+    .tag {
+      padding: 11px 13px; font-size: 11px; font-weight: 600;
+      color: var(--label); background: var(--prefix-bg);
+      letter-spacing: 0.05em; white-space: nowrap; display: flex; align-items: center;
+    }
+    .tag.prefix { border-right: 1px solid var(--prefix-border); }
+    .tag.suffix { border-left: 1px solid var(--prefix-border); }
+
+    input, select {
+      flex: 1; background: transparent; border: none; outline: none;
+      font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text);
+      padding: 11px 13px; min-width: 0;
+    }
+    input::placeholder { color: rgba(180,195,220,0.3); }
+    input[readonly] { color: rgba(180,195,220,0.3); cursor: default; }
+    select { cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%237ba8d4' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 13px center;
+    }
+    select option { background: #0d1b2a; color: var(--text); }
+
+    .hint { font-size: 11px; color: rgba(130,160,200,0.5); margin-top: 5px; }
+    .err-msg { font-size: 11px; color: var(--error); margin-top: 5px; }
+
+    /* RESULT CARD */
+    .result-card {
+      background: linear-gradient(135deg, rgba(79,156,249,0.1), rgba(99,102,241,0.07));
+      border: 1px solid rgba(79,156,249,0.2); border-radius: 16px;
+      padding: 18px 20px; position: relative; overflow: hidden;
+      animation: fadeUp 0.5s ease both;
+    }
+    .result-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at top right, rgba(79,156,249,0.07), transparent 70%);
+      pointer-events: none;
+    }
+    .result-label { font-size: 11px; font-weight: 600; color: var(--label); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px; }
+    .result-value { display: flex; align-items: baseline; gap: 6px; }
+    .result-currency { font-size: 11px; font-weight: 600; color: var(--blue); }
+    .result-number { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
+    .result-empty { font-size: 14px; color: rgba(180,195,220,0.2); }
+
+    /* CARD */
+    .card {
+      background: var(--card); border: 1px solid var(--card-border);
+      border-radius: 16px; padding: 20px 22px;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    /* SUMMARY */
+    .summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .summary-key { font-size: 12px; color: var(--muted); }
+    .summary-pct { font-size: 12px; font-weight: 600; color: var(--blue); }
+    .bar-track { height: 6px; background: rgba(255,255,255,0.07); border-radius: 99px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--blue), var(--indigo)); transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1); width: 0%; }
+    .summary-stats { display: flex; justify-content: space-between; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); }
+    .stat-label { font-size: 11px; color: rgba(130,160,200,0.5); margin-bottom: 4px; }
+    .stat-value { font-size: 16px; font-weight: 700; color: var(--text); }
+    .stat-value span { font-size: 10px; font-weight: 600; margin-right: 3px; }
+    .stat-value .c-blue { color: var(--blue); }
+    .stat-value .c-indigo { color: var(--indigo); }
+    .stat-dash { color: rgba(180,195,220,0.2); font-size: 14px; font-weight: 400; }
+
+    /* STATUS BADGE */
+    .status-badge {
+      margin-top: 14px; padding: 10px 14px; border-radius: 9px;
+      background: rgba(79,156,249,0.08); border: 1px solid rgba(79,156,249,0.15);
+      font-size: 12px; color: var(--label);
+    }
+    .status-badge strong { color: var(--blue); text-transform: capitalize; }
+
+    /* NOTE field inside card */
+    .note-inner { display: flex; flex-direction: column; height: 100%; justify-content: flex-start; }
+    .note-select-wrap {
+      background: var(--input-bg); border: 1px solid var(--input-border);
+      border-radius: 10px; overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .note-select-wrap:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(79,156,249,0.15); }
+
+    /* ANIMATIONS */
+    @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+    .d1 { animation-delay: 0.05s; }
+    .d2 { animation-delay: 0.1s; }
+    .d3 { animation-delay: 0.15s; }
+    .d4 { animation-delay: 0.2s; }
+    .d5 { animation-delay: 0.25s; }
+    .d6 { animation-delay: 0.3s; }
+    .d7 { animation-delay: 0.35s; }
+    .d8 { animation-delay: 0.4s; }
+    .d9 { animation-delay: 0.45s; }
+    .d10 { animation-delay: 0.5s; }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <div class="header d1">
+    <div class="header-icon">💰</div>
+    <div>
+      <div class="header-title">Loan Details</div>
+      <div class="header-sub">Section 2 — Financing Overview</div>
+    </div>
+  </div>
+  <div class="divider"></div>
+
+  <!-- ROW 1 -->
+  <div class="grid-4">
+    <!-- Date -->
+    <div class="field d2">
+      <div class="field-label">Date</div>
+      <div class="field-wrap" id="wrap-date">
+        <input type="text" id="inp-date" placeholder="DD-MM-YYYY" value="10-03-2026"/>
+        <span class="tag suffix">📅</span>
+      </div>
+    </div>
+
+    <!-- Principal -->
+    <div class="field d3">
+      <div class="field-label">Principal Loan</div>
+      <div class="field-wrap" id="wrap-principal">
+        <span class="tag prefix">RM</span>
+        <input type="text" id="inp-principal" placeholder="0.00" value="1300000" oninput="handleInput('principal')"/>
+      </div>
+      <div class="hint" id="hint-principal">Numbers only, e.g. 1000.00</div>
+    </div>
+
+    <!-- Tenure -->
+    <div class="field d4">
+      <div class="field-label">Repayment Period</div>
+      <div class="field-wrap" id="wrap-tenure">
+        <input type="text" id="inp-tenure" placeholder="0" value="24" oninput="handleInput('tenure')"/>
+        <span class="tag suffix">Months</span>
+      </div>
+      <div class="hint" id="hint-tenure">Numbers only</div>
+    </div>
+
+    <!-- Rate -->
+    <div class="field d5">
+      <div class="field-label">Interest Rate</div>
+      <div class="field-wrap" id="wrap-rate">
+        <input type="text" id="inp-rate" placeholder="0" value="12" oninput="handleInput('rate')"/>
+        <span class="tag suffix">% / yr</span>
+      </div>
+      <div class="hint" id="hint-rate">0 to 18</div>
+    </div>
+  </div>
+
+  <!-- ROW 2 -->
+  <div class="grid-4">
+    <!-- NPL -->
+    <div class="field d6">
+      <div class="field-label">Nonperforming Loan (NPL)</div>
+      <div class="field-wrap" id="wrap-npl">
+        <span class="tag prefix">RM</span>
+        <input type="text" id="inp-npl" placeholder="0.00" oninput="handleInput('npl')"/>
+      </div>
+      <div class="hint" id="hint-npl">NPL if unpaid after 90 days</div>
+    </div>
+
+    <!-- Total Interest -->
+    <div class="result-card d7">
+      <div class="result-label">Total Interest</div>
+      <div class="result-value">
+        <span class="result-currency">RM</span>
+        <span class="result-number" id="out-interest"><span class="result-empty">—</span></span>
+      </div>
+      <div class="hint" style="margin-top:6px">Auto-calculated</div>
+    </div>
+
+    <!-- Total Loan -->
+    <div class="result-card d8">
+      <div class="result-label">Total Loan Amount</div>
+      <div class="result-value">
+        <span class="result-currency" style="color:var(--indigo)">RM</span>
+        <span class="result-number" id="out-total"><span class="result-empty">—</span></span>
+      </div>
+      <div class="hint" style="margin-top:6px">Auto-calculated</div>
+    </div>
+
+    <!-- Outstanding -->
+    <div class="field d9">
+      <div class="field-label">Outstanding Balance</div>
+      <div class="field-wrap readonly">
+        <span class="tag prefix">RM</span>
+        <input type="text" id="out-outstanding" placeholder="Auto-calculated" readonly/>
+      </div>
+      <div class="hint">Numbers only, e.g. 1000.00</div>
+    </div>
+  </div>
+
+  <!-- ROW 3 — Summary + Note -->
+  <div class="grid-2">
+    <!-- Summary -->
+    <div class="card d10">
+      <div class="field-label" style="margin-bottom:14px">Loan Breakdown</div>
+      <div class="summary-row">
+        <span class="summary-key">Principal vs Total</span>
+        <span class="summary-pct" id="out-pct">—</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="bar-fill"></div></div>
+      <div class="summary-stats">
+        <div>
+          <div class="stat-label">Monthly Payment</div>
+          <div class="stat-value" id="out-monthly"><span class="stat-dash">—</span></div>
+        </div>
+        <div style="text-align:right">
+          <div class="stat-label">Total Repayment</div>
+          <div class="stat-value" id="out-repay"><span class="stat-dash">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Note -->
+    <div class="card d10">
+      <div class="note-inner">
+        <div class="field-label" style="margin-bottom:8px">Note</div>
+        <div class="note-select-wrap">
+          <select id="inp-note" onchange="handleNote()">
+            <option value="">-- Select --</option>
+            <option value="performing">Performing</option>
+            <option value="non-performing">Non-Performing</option>
+            <option value="restructured">Restructured</option>
+            <option value="written-off">Written Off</option>
+          </select>
+        </div>
+        <div class="status-badge" id="status-badge" style="display:none">
+          Status: <strong id="status-text"></strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function fmt(n) {
+    return Number(n).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function isNum(v) {
+    return /^\d*\.?\d*$/.test(String(v).trim()) && String(v).trim() !== '';
+  }
+
+  function setError(field, msg) {
+    const wrap = document.getElementById('wrap-' + field);
+    const hint = document.getElementById('hint-' + field);
+    if (wrap) wrap.classList.add('error');
+    if (hint) { hint.textContent = '⚠ ' + msg; hint.className = 'err-msg'; hint.id = 'hint-' + field; }
+  }
+
+  function clearError(field, defaultHint) {
+    const wrap = document.getElementById('wrap-' + field);
+    const hint = document.getElementById('hint-' + field);
+    if (wrap) wrap.classList.remove('error');
+    if (hint) { hint.textContent = defaultHint; hint.className = 'hint'; hint.id = 'hint-' + field; }
+  }
+
+  const hints = {
+    principal: 'Numbers only, e.g. 1000.00',
+    tenure: 'Numbers only',
+    rate: '0 to 18',
+    npl: 'NPL if unpaid after 90 days'
+  };
+
+  function handleInput(field) {
+    const val = document.getElementById('inp-' + field).value;
+    if (val && !isNum(val)) {
+      setError(field, 'Only numbers allowed.');
+    } else if (field === 'rate' && val && parseFloat(val) > 18) {
+      setError(field, 'Must be between 0 and 18.');
+    } else {
+      clearError(field, hints[field]);
+    }
+    calculate();
+  }
+
+  function calculate() {
+    const p = parseFloat(document.getElementById('inp-principal').value);
+    const r = parseFloat(document.getElementById('inp-rate').value) / 100 / 12;
+    const n = parseFloat(document.getElementById('inp-tenure').value);
+
+    const interestEl = document.getElementById('out-interest');
+    const totalEl = document.getElementById('out-total');
+    const monthlyEl = document.getElementById('out-monthly');
+    const repayEl = document.getElementById('out-repay');
+    const pctEl = document.getElementById('out-pct');
+    const barFill = document.getElementById('bar-fill');
+
+    if (!isNaN(p) && !isNaN(r) && !isNaN(n) && n > 0 && r > 0 && p > 0) {
+      const mp = (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+      const total = mp * n;
+      const interest = total - p;
+      const pct = Math.min(100, (p / total) * 100);
+
+      interestEl.textContent = fmt(interest);
+      totalEl.textContent = fmt(total);
+      monthlyEl.innerHTML = '<span class="c-blue" style="font-size:10px;font-weight:600;margin-right:3px">RM</span>' + fmt(mp);
+      repayEl.innerHTML = '<span class="c-indigo" style="font-size:10px;font-weight:600;margin-right:3px">RM</span>' + fmt(total);
+      pctEl.textContent = pct.toFixed(1) + '%';
+      barFill.style.width = pct + '%';
+    } else {
+      const dash = '<span class="stat-dash">—</span>';
+      const rdash = '<span class="result-empty">—</span>';
+      interestEl.innerHTML = rdash;
+      totalEl.innerHTML = rdash;
+      monthlyEl.innerHTML = dash;
+      repayEl.innerHTML = dash;
+      pctEl.textContent = '—';
+      barFill.style.width = '0%';
+    }
+  }
+
+  function handleNote() {
+    const val = document.getElementById('inp-note').value;
+    const badge = document.getElementById('status-badge');
+    const text = document.getElementById('status-text');
+    if (val) {
+      badge.style.display = 'block';
+      text.textContent = val.replace('-', ' ');
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  // Init
+  calculate();
+</script>
+</body>
+</html>
